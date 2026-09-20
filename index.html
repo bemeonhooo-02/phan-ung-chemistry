@@ -1,39 +1,898 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chemistry Shooter</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #050510; font-family: system-ui, -apple-system, sans-serif; color: #fff; }
-        #game-container { position: relative; width: 100vw; height: 100vh; background: #050510; }
-        canvas { display: block; width: 100%; height: 100%; }
-        #hud { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 500px; background: rgba(15, 20, 40, 0.9); border: 2px solid #00f0ff; border-radius: 12px; padding: 10px; box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); pointer-events: none; z-index: 10; }
-        .mission-title { font-size: 14px; font-weight: bold; color: #ffe600; text-align: center; margin-bottom: 4px; }
-        .mission-formula { font-size: 11px; color: #00f0ff; text-align: center; margin-bottom: 6px; font-style: italic; }
-        .checklist { display: flex; justify-content: space-around; background: rgba(0, 0, 0, 0.5); padding: 6px; border-radius: 6px; font-size: 12px; }
-        .check-item { color: #aaa; }
-        .check-item.done { color: #00ff66; font-weight: bold; text-shadow: 0 0 8px #00ff66; }
-        .health-container { margin-top: 6px; width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
-        #health-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #ff3366, #00ff66); transition: width 0.2s; }
-        #warning-popup { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; font-weight: bold; color: #ff3366; text-shadow: 0 0 10px #ff3366; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 20; background: rgba(0,0,0,0.85); padding: 8px 16px; border-radius: 8px; border: 1px solid #ff3366; width: max-content; }
-        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 16, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 30; padding: 20px; text-align: center; }
-        .modal h1 { font-size: 24px; color: #00f0ff; margin-bottom: 12px; text-shadow: 0 0 15px #00f0ff; }
-        .modal p { font-size: 14px; color: #ddd; max-width: 400px; line-height: 1.5; margin-bottom: 24px; }
-        .btn { background: linear-gradient(45deg, #00f0ff, #7000ff); border: none; color: white; padding: 12px 28px; font-size: 15px; font-weight: bold; border-radius: 25px; cursor: pointer; box-shadow: 0 0 15px rgba(0, 240, 255, 0.5); }
-        .btn:active { transform: scale(0.95); }
-        .hidden { display: none !important; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chemical Shooter: Rogue-lite Chemistry</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background-color: #080914;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #game-container {
+      position: relative;
+      width: 900px;
+      height: 650px;
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+      border: 2px solid #00f0ff;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #030511;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* HUD UI OVERLAY */
+    .hud-panel {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    .hud-box {
+      background: rgba(10, 15, 30, 0.75);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      padding: 8px 16px;
+      border-radius: 8px;
+      backdrop-filter: blur(4px);
+    }
+    .hud-title {
+      font-size: 11px;
+      color: #88aacc;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .hud-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #00f0ff;
+    }
+    .target-box {
+      flex-grow: 1;
+      margin: 0 12px;
+      text-align: center;
+      border-color: #ff9900;
+    }
+    .target-box .hud-value {
+      color: #ffcc00;
+      font-size: 16px;
+    }
+    .bar-container {
+      width: 120px;
+      height: 10px;
+      background: #111;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 4px;
+      border: 1px solid #333;
+    }
+    .bar-fill-hp {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff3366, #ff6600);
+      transition: width 0.2s;
+    }
+    .bar-fill-fever {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #00f0ff, #e000ff);
+      transition: width 0.1s;
+    }
+
+    /* MODAL OVERLAYS */
+    .modal {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(5, 8, 20, 0.88);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      backdrop-filter: blur(6px);
+    }
+    .modal h1 {
+      font-size: 32px;
+      color: #00f0ff;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px #00f0ff;
+    }
+    .modal p {
+      font-size: 15px;
+      color: #bbb;
+      margin-bottom: 20px;
+      max-width: 80%;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .btn {
+      background: linear-gradient(45deg, #00f0ff, #0066ff);
+      border: none;
+      color: #fff;
+      padding: 12px 28px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 25px;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.8);
+    }
+    .buff-list {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .buff-card {
+      background: rgba(20, 30, 55, 0.9);
+      border: 1px solid #00f0ff;
+      border-radius: 10px;
+      padding: 15px;
+      width: 200px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .buff-card:hover {
+      transform: translateY(-5px);
+      background: rgba(30, 50, 90, 1);
+      box-shadow: 0 0 20px #00f0ff;
+    }
+    .buff-card h3 {
+      color: #ffcc00;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+    .buff-card p {
+      font-size: 12px;
+      color: #ccc;
+      margin: 0;
+    }
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="hud">
-            <div class="mission-title">🎯 Nhiệm vụ: Tạo mùi thơm chuối chín (Tạo Ester)</div>
-            <div class="mission-formula">💡 Carboxylic acid + Alcohol → Ester + Water</div>
-            <div class="checklist">
-                <div id="item1" class="check-item">[ ] Ethanoic acid</div>
-                <div id="item2" class="check-item">[ ] Ethanol</div>
+
+<div id="game-container">
+  <canvas id="canvas"></canvas>
+
+  <!-- HUD -->
+  <div class="hud-panel">
+    <div class="hud-box">
+      <div class="hud-title">Tàu / HP</div>
+      <div class="bar-container"><div id="hp-bar" class="bar-fill-hp"></div></div>
+      <div class="hud-title" style="margin-top:6px;">FEVER</div>
+      <div class="bar-container"><div id="fever-bar" class="bar-fill-fever"></div></div>
+    </div>
+
+    <div class="hud-box target-box">
+      <div class="hud-title" id="wave-title">WAVE 1</div>
+      <div class="hud-value" id="target-desc">Đang tải nhiệm vụ...</div>
+      <div style="font-size: 13px; color: #00f0ff; margin-top: 4px;" id="target-progress">Tiến độ: 0 / 3</div>
+    </div>
+
+    <div class="hud-box" style="text-align: right;">
+      <div class="hud-title">Điểm số</div>
+      <div class="hud-value" id="score-txt">0</div>
+      <div style="font-size: 12px; color: #ffcc00; margin-top: 4px;" id="combo-txt">Combo: x1</div>
+    </div>
+  </div>
+
+  <!-- START MODAL -->
+  <div id="start-modal" class="modal">
+    <h1>CHEMICAL SHOOTER</h1>
+    <p>Di chuyển tàu để bắn vỡ các quả cầu, sau đó <b>HÚT ĐÚNG phân tử</b> yêu cầu để tích lũy.<br>Tránh hút nhầm chất bẫy hoặc để tàu bị đâm!</p>
+    <p style="color: #88aacc; font-size: 13px;"><b>Điều khiển:</b> Dùng Chuột hoặc Phím A/D (Mũi tên Left/Right) để di chuyển.<br>Đạn tự động bắn với tốc độ vừa phải.</p>
+    <button class="btn" id="start-btn">BẮT ĐẦU VẬN HÀNH</button>
+  </div>
+
+  <!-- BUFF SELECTION MODAL -->
+  <div id="buff-modal" class="modal hidden">
+    <h1 style="color: #ffcc00; text-shadow: 0 0 10px #ffcc00;">NÂNG CẤP TÀU BAY</h1>
+    <p>Chọn 1 Kỹ năng bổ trợ cho chặng tiếp theo:</p>
+    <div class="buff-list" id="buff-cards-container"></div>
+  </div>
+
+  <!-- GAME OVER MODAL -->
+  <div id="gameover-modal" class="modal hidden">
+    <h1 style="color: #ff3366; text-shadow: 0 0 10px #ff3366;">TÀU BỊ PHÁ HỦY!</h1>
+    <p id="gameover-stats">Bạn đã trụ được qua Wave 1 với 0 điểm.</p>
+    <button class="btn" id="restart-btn">THỬ LẠI LẦN NỮA</button>
+  </div>
+</div>
+
+<script>
+// --- NGÂN HÀNG CÂU HỎI HÓA HỌC (GIỮA KỲ 1 HÓA 12 & NỀN TẢNG) ---
+const QUESTION_BANK = [
+  {
+    title: "Chế tạo Giấm ăn (Ethanoic acid)",
+    target: "CH3COOH",
+    traps: ["HCOOH", "HCl", "H2SO4", "CH3OH"],
+    req: 3,
+    note: "Giấm ăn có thành phần chính là CH3COOH (Ethanoic acid 2-5%)."
+  },
+  {
+    title: "Tạo Ester Isoamyl Acetate (Mùi chuối chín)",
+    target: "CH3COOC5H11",
+    traps: ["HCOOCH3", "CH3COOCH3", "HCOOCH2CH3", "C2H5OH"],
+    req: 3,
+    note: "Isoamyl acetate có mùi thơm đặc trưng của chuối chín."
+  },
+  {
+    title: "Tạo Dung dịch Kiềm Xút ăn da (Sodium Hydroxide)",
+    target: "NaOH",
+    traps: ["KOH", "Ca(OH)2", "HCl", "CuSO4"],
+    req: 4,
+    note: "NaOH là base mạnh dùng trong sản xuất xà phòng."
+  },
+  {
+    title: "Thu thập Alcohol 3 chức sản xuất chất chống đông (Glycerol)",
+    target: "C3H5(OH)3",
+    traps: ["C2H5OH", "CH3OH", "C6H5OH", "CH3COOH"],
+    req: 3,
+    note: "Glycerol C3H5(OH)3 là alcohol đa chức có vị ngọt."
+  },
+  {
+    title: "Thu thập Phenol tác dụng với dung dịch Bromine",
+    target: "C6H5OH",
+    traps: ["C2H5OH", "CH3COOH", "C6H6", "NaOH"],
+    req: 3,
+    note: "Phenol C6H5OH tác dụng với nước Bromine tạo kết tủa trắng."
+  },
+  {
+    title: "Thủy phân Chất béo no Tristearin",
+    target: "(C17H35COO)3C3H5",
+    traps: ["(C17H33COO)3C3H5", "CH3COOH", "C6H12O6", "C12H22O11"],
+    req: 3,
+    note: "Tristearin là chất béo no, trạng thái rắn ở nhiệt độ thường."
+  },
+  {
+    title: "Tạo Ester Ethyl Acetate đơn giản",
+    target: "CH3COOC2H5",
+    traps: ["HCOOCH3", "CH3COOH", "C2H5OH", "HCOOC2H5"],
+    req: 4,
+    note: "Ethyl acetate CH3COOC2H5 là este mùi thơm hoa quả."
+  },
+  {
+    title: "Phản ứng Trung hòa tạo Muối ăn",
+    target: "NaCl",
+    traps: ["KCl", "Na2SO4", "CaCl2", "NaOH"],
+    req: 4,
+    note: "HCl + NaOH -> NaCl + H2O."
+  },
+  {
+    title: "Thu thập Đường Monosaccharide tráng được Bạc (Glucose)",
+    target: "Glucose",
+    traps: ["Sucrose", "Starch", "Cellulose", "Glycerol"],
+    req: 3,
+    note: "Glucose C6H12O6 chứa nhóm aldehyde -CHO tráng được bạc."
+  },
+  {
+    title: "Hydro hóa Chất béo lỏng Triolein tạo Bơ",
+    target: "(C17H33COO)3C3H5",
+    traps: ["(C17H35COO)3C3H5", "CH3COOH", "C2H5OH", "C3H5(OH)3"],
+    req: 3,
+    note: "Hydro hóa Triolein (lỏng) tạo thành Tristearin (rắn)."
+  }
+];
+
+// --- HỆ THỐNG ÂM THANH MÔ PHỎNG (WEB AUDIO API) ---
+class SoundController {
+  constructor() {
+    this.ctx = null;
+  }
+  init() {
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  playLaser() {
+    if (!this.ctx) return;
+    let osc = this.ctx.createOscillator();
+    let gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.08);
+  }
+  playPop() {
+    if (!this.ctx) return;
+    let osc = this.ctx.createOscillator();
+    let gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.12);
+  }
+  playPickup() {
+    if (!this.ctx) return;
+    let osc = this.ctx.createOscillator();
+    let gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.15);
+  }
+  playHurt() {
+    if (!this.ctx) return;
+    let osc = this.ctx.createOscillator();
+    let gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+}
+const sounds = new SoundController();
+
+// --- GAME ENGINE & SETUP ---
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 900;
+canvas.height = 650;
+
+// Trạng thái Game
+let gameState = 'START'; // START, PLAYING, BUFF_SELECT, GAMEOVER
+let wave = 1;
+let score = 0;
+let combo = 1;
+let currTask = null;
+let taskProgress = 0;
+let feverEnergy = 0;
+let feverActive = false;
+let feverTimer = 0;
+
+// Thuộc tính nâng cấp Rogue-lite
+let upgrades = {
+  bulletSpeed: 7,     // ĐÃ CHỈNH: Tốc độ đạn vừa phải, êm mắt
+  fireInterval: 220,  // Tốc độ nhả đạn vừa phải (ms)
+  magnetRange: 60,    // Bán kính nam châm hút
+  shieldCount: 0
+};
+
+// Controls
+let mouseX = canvas.width / 2;
+let keys = {};
+
+window.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+});
+window.addEventListener('keydown', e => keys[e.code] = true);
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+// Dữ liệu Thực thể
+class Player {
+  constructor() {
+    this.x = canvas.width / 2;
+    this.y = canvas.height - 50;
+    this.width = 44;
+    this.height = 44;
+    this.hp = 100;
+    this.maxHp = 100;
+    this.lastShot = 0;
+  }
+  update(now) {
+    // Di chuyển bằng phím hoặc chuột
+    if (keys['ArrowLeft'] || keys['KeyA']) this.x -= 8;
+    if (keys['ArrowRight'] || keys['KeyD']) this.x += 8;
+    
+    // Smooth bám theo chuột nếu có di chuyển chuột
+    if (!keys['ArrowLeft'] && !keys['KeyA'] && !keys['ArrowRight'] && !keys['KeyD']) {
+      this.x += (mouseX - this.x) * 0.15;
+    }
+
+    // Giới hạn màn hình
+    if (this.x < 25) this.x = 25;
+    if (this.x > canvas.width - 25) this.x = canvas.width - 25;
+
+    // Tự động bắn đạn với nhịp vừa phải
+    let rate = feverActive ? upgrades.fireInterval / 2 : upgrades.fireInterval;
+    if (now - this.lastShot > rate) {
+      bullets.push(new Bullet(this.x, this.y - 20));
+      sounds.playLaser();
+      this.lastShot = now;
+    }
+  }
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    // Vẽ Khiên nếu có
+    if (upgrades.shieldCount > 0) {
+      ctx.beginPath();
+      ctx.arc(0, 0, 32, 0, Math.PI * 2);
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#00f0ff';
+      ctx.stroke();
+    }
+
+    // Tàu vũ trụ Neon
+    ctx.beginPath();
+    ctx.moveTo(0, -22);
+    ctx.lineTo(20, 18);
+    ctx.lineTo(0, 10);
+    ctx.lineTo(-20, 18);
+    ctx.closePath();
+    ctx.fillStyle = feverActive ? '#e000ff' : '#00f0ff';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = feverActive ? '#e000ff' : '#00f0ff';
+    ctx.fill();
+
+    // Lửa đuôi tàu
+    ctx.beginPath();
+    ctx.moveTo(-8, 14);
+    ctx.lineTo(0, 26 + Math.random() * 6);
+    ctx.lineTo(8, 14);
+    ctx.fillStyle = '#ff9900';
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+class Bullet {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.speed = upgrades.bulletSpeed; // Tốc độ đạn vừa phải
+    this.radius = 4;
+  }
+  update() {
+    this.y -= this.speed;
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = feverActive ? '#ff00ea' : '#00ffff';
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = feverActive ? '#ff00ea' : '#00ffff';
+    ctx.fill();
+  }
+}
+
+class Bubble {
+  constructor() {
+    this.x = Math.random() * (canvas.width - 80) + 40;
+    this.y = -40;
+    this.radius = 28;
+    this.speed = 1.0 + wave * 0.12;
+    this.hp = Math.min(1 + Math.floor(wave / 2), 4);
+    this.maxHp = this.hp;
+
+    // Quyết định bóng chứa chất đúng hay chất bẫy
+    let isCorrect = Math.random() < 0.45;
+    if (isCorrect) {
+      this.formula = currTask.target;
+      this.isTarget = true;
+    } else {
+      let randTrap = currTask.traps[Math.floor(Math.random() * currTask.traps.length)];
+      this.formula = randTrap;
+      this.isTarget = false;
+    }
+  }
+  update() {
+    this.y += this.speed;
+  }
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    // Vỏ Bong bóng
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20, 40, 80, 0.6)';
+    ctx.strokeStyle = this.isTarget ? '#00f0ff' : '#ff3366';
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = this.strokeStyle;
+    ctx.fill();
+    ctx.stroke();
+
+    // Chữ Công thức Hóa học
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.formula, 0, 0);
+
+    // Vạch Máu bóng (nếu máu > 1)
+    if (this.maxHp > 1) {
+      ctx.fillStyle = '#ff0055';
+      ctx.fillRect(-15, this.radius + 4, 30 * (this.hp / this.maxHp), 3);
+    }
+
+    ctx.restore();
+  }
+}
+
+class DroppedCore {
+  constructor(x, y, formula, isTarget) {
+    this.x = x;
+    this.y = y;
+    this.formula = formula;
+    this.isTarget = isTarget;
+    this.speed = 2.2;
+    this.radius = 16;
+  }
+  update(player) {
+    // Cơ chế Nam châm Hút Lõi phân tử
+    let dx = player.x - this.x;
+    let dy = player.y - this.y;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < upgrades.magnetRange || feverActive) {
+      this.x += (dx / dist) * 6;
+      this.y += (dy / dist) * 6;
+    } else {
+      this.y += this.speed;
+    }
+  }
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.isTarget ? '#ffcc00' : '#ff0055';
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = this.fillStyle;
+    ctx.fill();
+
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.formula, 0, 0);
+
+    ctx.restore();
+  }
+}
+
+class Particle {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    this.vx = (Math.random() - 0.5) * 6;
+    this.vy = (Math.random() - 0.5) * 6;
+    this.color = color;
+    this.life = 1.0;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    this.life -= 0.04;
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 3 * this.life, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+  }
+}
+
+// Mảng quản lý thực thể
+let player = new Player();
+let bullets = [];
+let bubbles = [];
+let cores = [];
+let particles = [];
+let lastBubbleSpawn = 0;
+
+// --- NỀN TRỜI SAO LẤP LÁNH ---
+let stars = [];
+for (let i = 0; i < 70; i++) {
+  stars.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    size: Math.random() * 2,
+    speed: Math.random() * 0.8 + 0.2
+  });
+}
+
+function drawBackground() {
+  ctx.fillStyle = '#030511';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#ffffff';
+  stars.forEach(s => {
+    s.y += s.speed;
+    if (s.y > canvas.height) s.y = 0;
+    ctx.fillRect(s.x, s.y, s.size, s.size);
+  });
+}
+
+// --- QUẢN LÝ NHIỆM VỤ WAVE ---
+function loadTask() {
+  let randIdx = Math.floor(Math.random() * QUESTION_BANK.length);
+  currTask = QUESTION_BANK[randIdx];
+  taskProgress = 0;
+  updateHUD();
+}
+
+function updateHUD() {
+  document.getElementById('hp-bar').style.width = `${Math.max(0, player.hp)}%`;
+  document.getElementById('fever-bar').style.width = `${feverEnergy}%`;
+  document.getElementById('wave-title').innerText = `WAVE ${wave}`;
+  document.getElementById('target-desc').innerText = currTask.title;
+  document.getElementById('target-progress').innerText = `Cần Hút: ${currTask.target} (${taskProgress}/${currTask.req})`;
+  document.getElementById('score-txt').innerText = score;
+  document.getElementById('combo-txt').innerText = `Combo: x${combo}`;
+}
+
+function spawnParticles(x, y, color, count = 10) {
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(x, y, color));
+  }
+}
+
+// --- GAME LOOP CHÍNH ---
+function gameLoop(time) {
+  drawBackground();
+
+  if (gameState === 'PLAYING') {
+    player.update(time);
+    player.draw();
+
+    // Cập nhật FEVER Mode
+    if (feverActive) {
+      feverTimer--;
+      if (feverTimer <= 0) {
+        feverActive = false;
+        feverEnergy = 0;
+      }
+    }
+
+    // Spawn Bóng nguyên tử
+    if (time - lastBubbleSpawn > Math.max(1800 - wave * 100, 800)) {
+      bubbles.push(new Bubble());
+      lastBubbleSpawn = time;
+    }
+
+    // 1. Cập nhật Đạn
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      let b = bullets[i];
+      b.update();
+      b.draw();
+
+      if (b.y < -10) {
+        bullets.splice(i, 1);
+        continue;
+      }
+
+      // Va chạm Đạn vs Bóng
+      for (let j = bubbles.length - 1; j >= 0; j--) {
+        let bub = bubbles[j];
+        let dist = Math.hypot(b.x - bub.x, b.y - bub.y);
+
+        if (dist < bub.radius + b.radius) {
+          bullets.splice(i, 1);
+          bub.hp--;
+          spawnParticles(bub.x, bub.y, '#00f0ff', 4);
+
+          if (bub.hp <= 0) {
+            sounds.playPop();
+            cores.push(new DroppedCore(bub.x, bub.y, bub.formula, bub.isTarget));
+            spawnParticles(bub.x, bub.y, bub.isTarget ? '#00f0ff' : '#ff3366', 12);
+            bubbles.splice(j, 1);
+          }
+          break;
+        }
+      }
+    }
+
+    // 2. Cập nhật Bóng rơi
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      let bub = bubbles[i];
+      bub.update();
+      bub.draw();
+
+      // Bóng va chạm trực tiếp với Tàu Player
+      let dist = Math.hypot(player.x - bub.x, player.y - bub.y);
+      if (dist < player.width / 2 + bub.radius) {
+        takeDamage(15);
+        spawnParticles(bub.x, bub.y, '#ff3366', 15);
+        bubbles.splice(i, 1);
+        continue;
+      }
+
+      if (bub.y > canvas.height + 40) {
+        bubbles.splice(i, 1);
+      }
+    }
+
+    // 3. Cập nhật Lõi Phân Tử rơi & Hút vào Tàu
+    for (let i = cores.length - 1; i >= 0; i--) {
+      let c = cores[i];
+      c.update(player);
+      c.draw();
+
+      let dist = Math.hypot(player.x - c.x, player.y - c.y);
+      if (dist < player.width / 2 + c.radius) {
+        if (c.isTarget) {
+          // HÚT ĐÚNG CHẤT!
+          sounds.playPickup();
+          taskProgress++;
+          score += 100 * combo;
+          combo++;
+          spawnParticles(c.x, c.y, '#ffcc00', 15);
+
+          // Tích năng lượng Fever
+          if (!feverActive) {
+            feverEnergy += 20;
+            if (feverEnergy >= 100) {
+              feverActive = true;
+              feverTimer = 300; // ~5 giây
+            }
+          }
+
+          // Kiểm tra hoàn thành Wave
+          if (taskProgress >= currTask.req) {
+            completeWave();
+          }
+        } else {
+          // HÚT NHẦM CHẤT BẪY!
+          takeDamage(10);
+          combo = 1;
+          spawnParticles(c.x, c.y, '#ff0000', 15);
+        }
+        cores.splice(i, 1);
+        updateHUD();
+        continue;
+      }
+
+      if (c.y > canvas.height + 30) {
+        cores.splice(i, 1);
+      }
+    }
+
+    // 4. Cập nhật Hiệu ứng Hạt
+    for (let i = particles.length - 1; i >= 0; i--) {
+      let p = particles[i];
+      p.update();
+      p.draw();
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// Trừ HP & Xử lý Khiên
+function takeDamage(amt) {
+  if (upgrades.shieldCount > 0) {
+    upgrades.shieldCount--;
+    sounds.playHurt();
+    return;
+  }
+  player.hp -= amt;
+  sounds.playHurt();
+  if (player.hp <= 0) {
+    player.hp = 0;
+    gameOver();
+  }
+  updateHUD();
+}
+
+// Complete Wave
+function completeWave() {
+  wave++;
+  score += 500;
+  
+  if (wave % 3 === 0) {
+    // Hiện bảng chọn Buff mỗi 3 wave
+    showBuffSelection();
+  } else {
+    loadTask();
+  }
+}
+
+function showBuffSelection() {
+  gameState = 'BUFF_SELECT';
+  const container = document.getElementById('buff-cards-container');
+  container.innerHTML = '';
+
+  const buffPool = [
+    { title: '🧲 NAM CHÂM LỚN', desc: 'Tăng bán kính hút phân tử thêm 50%', action: () => upgrades.magnetRange += 40 },
+    { title: '🔫 TĂNG BẮN TỐC', desc: 'Tăng nhịp bắn đạn nhanh hơn 25%', action: () => upgrades.fireInterval = Math.max(120, upgrades.fireInterval - 50) },
+    { title: '🛡️ GIÁP CHỐNG ACID', desc: 'Nhận 2 lần khiên đỡ đòn hoàn toàn', action: () => upgrades.shieldCount += 2 },
+    { title: '🧪 BÌNH HỒI PHỤC', desc: 'Hồi phục ngay 40 HP cho tàu bay', action: () => player.hp = Math.min(100, player.hp + 40) }
+  ];
+
+  // Bốc ngẫu nhiên 3 Buff
+  let shuffled = buffPool.sort(() => 0.5 - Math.random()).slice(0, 3);
+  shuffled.forEach(b => {
+    let card = document.createElement('div');
+    card.className = 'buff-card';
+    card.innerHTML = `<h3>${b.title}</h3><p>${b.desc}</p>`;
+    card.onclick = () => {
+      b.action();
+      document.getElementById('buff-modal').classList.add('hidden');
+      gameState = 'PLAYING';
+      loadTask();
+    };
+    container.appendChild(card);
+  });
+
+  document.getElementById('buff-modal').classList.remove('hidden');
+}
+
+function gameOver() {
+  gameState = 'GAMEOVER';
+  document.getElementById('gameover-stats').innerText = `Bạn đã dừng chân tại Wave ${wave} với tổng điểm là ${score}.`;
+  document.getElementById('gameover-modal').classList.remove('hidden');
+}
+
+function resetGame() {
+  wave = 1;
+  score = 0;
+  combo = 1;
+  player.hp = 100;
+  bullets = [];
+  bubbles = [];
+  cores = [];
+  upgrades = { bulletSpeed: 7, fireInterval: 220, magnetRange: 60, shieldCount: 0 };
+  
+  document.getElementById('gameover-modal').classList.add('hidden');
+  document.getElementById('start-modal').classList.add('hidden');
+  
+  gameState = 'PLAYING';
+  loadTask();
+}
+
+// Event Listeners Buttons
+document.getElementById('start-btn').addEventListener('click', () => {
+  sounds.init();
+  resetGame();
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  resetGame();
+});
+
+// Chạy Game Loop
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
             </div>
             <div class="health-container">
                 <div id="health-bar"></div>
